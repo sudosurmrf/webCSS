@@ -1,57 +1,134 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complex Nested HTML</title>
     <script defer type="module" src="/src/main.jsx"></script>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>WebCSS</title>
-  </head>
-  
-    <div id="root"></div>
-    <body>
-      <header>
-          <div class="header-content">
-              <h1 opacity=".9">Main Title</h1>
-              <nav>
-                <div>
-                  <div>
-                    <div>
-                      <div>
-                      </div>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        .header, .footer {
+            width: 100%;
+            background-color: #333;
+            color: white;
+            text-align: center;
+            padding: 15px 0;
+        }
+        .main-content {
+            display: flex;
+            flex-direction: row;
+            width: 80%;
+            margin: 20px 0;
+        }
+        .sidebar, .content {
+            padding: 15px;
+        }
+        .sidebar {
+            flex: 1;
+            background-color: #f4f4f4;
+        }
+        .content {
+            flex: 2;
+            background-color: #eaeaea;
+        }
+        .content section {
+            margin-bottom: 20px;
+        }
+        .content section h2 {
+            margin-bottom: 10px;
+        }
+        .content section p {
+            margin: 0 0 10px;
+        }
+        .nested-list {
+            list-style-type: square;
+            margin: 0;
+            padding-left: 20px;
+        }
+        .nested-list li ul {
+            list-style-type: circle;
+            margin: 0;
+            padding-left: 20px;
+        }
+        .nested-divs > div {
+            margin: 10px 0;
+            padding: 10px;
+            border: 1px solid #333;
+        }
+    </style>
+</head>
+<div id="root"></div>
+<body>
+    <header class="header">
+        <h1>Welcome to the Complex HTML Page</h1>
+    </header>
+    <div class="container">
+        <div class="main-content">
+            <aside class="sidebar">
+                <nav>
+                    <ul>
+                        <li><a href="#">Home</a></li>
+                        <li><a href="#">About</a></li>
+                        <li><a href="#">Services</a></li>
+                        <li><a href="#">Contact</a></li>
+                    </ul>
+                </nav>
+            </aside>
+            <article class="content">
+                <section>
+                    <h2>Introduction</h2>
+                    <p>This is a paragraph within a section.</p>
+                    <p>Here is another paragraph for testing purposes.</p>
+                </section>
+                <section>
+                    <h2>Nested List Example</h2>
+                    <ul class="nested-list">
+                        <li>Item 1
+                            <ul>
+                                <li>Subitem 1.1
+                                    <ul>
+                                        <li>Subsubitem 1.1.1</li>
+                                        <li>Subsubitem 1.1.2</li>
+                                    </ul>
+                                </li>
+                                <li>Subitem 1.2</li>
+                            </ul>
+                        </li>
+                        <li>Item 2</li>
+                        <li>Item 3
+                            <ul>
+                                <li>Subitem 3.1</li>
+                                <li>Subitem 3.2</li>
+                            </ul>
+                        </li>
+                    </ul>
+                </section>
+                <section>
+                    <h2>Nested Div Elements</h2>
+                    <div class="nested-divs">
+                        <div>
+                            <div>
+                                <div>Deeply nested content</div>
+                            </div>
+                        </div>
+                        <div>Another nested div</div>
                     </div>
-                  </div>
-                  <ul style="border-radius: 5px;">
-                    <li ><a href="#">Home</a></li>
-                    <li><a href="#">About</a></li>
-                    <li><a href="#">Services</a></li>
-                    <li><a href="#">Contact</a></li>
-                  </ul>
-                </div>
-              </nav>
-          </div>
-      </header>
-      <main>
-          <section>
-              <h2>Section Title</h2>
-              <article>
-                  <p>This is a paragraph inside an article.</p>
-                  <p>Another paragraph with some <strong>bold text</strong> and a <a href="#">link</a>.</p>
-              </article>
-          </section>
-          <aside>
-              <h3>Related Information</h3>
-              <ul>
-                  <li><a href="#">Link 1</a></li>
-                  <li><a href="#">Link 2</a></li>
-                  <li><a href="#">Link 3</a></li>
-              </ul>
-          </aside>
-      </main>
-      <footer>
-          <p>Footer content with a <a href="#">link</a> and some <em>emphasized text</em>.</p>
-      </footer>
-  </body>
-  
-    
- 
+                </section>
+            </article>
+        </div>
+    </div>
+    <footer class="footer">
+        <p>&copy; 2024 Complex HTML Page. All rights reserved.</p>
+    </footer>
+</body>
 </html>
