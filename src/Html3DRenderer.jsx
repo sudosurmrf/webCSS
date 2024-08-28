@@ -9,41 +9,45 @@ const Html3DRenderer = () => {
     const sceneRef = useRef(null);
 
     useEffect(() => {
-        // Set up the scene
         const scene = new THREE.Scene();
         sceneRef.current = scene;
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
 
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
+        camera.position.set(0, 0, 10);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         mountRef.current.appendChild(renderer.domElement);
 
-        // Set up OrbitControls
+       // Initialize OrbitControls
         const controls = new OrbitControls(camera, renderer.domElement);
-        controls.enableDamping = true;
-        controls.dampingFactor = 0.05;
-        controls.screenSpacePanning = false;
-        controls.maxPolarAngle = Math.PI / 2;
+        controls.enableDamping = false; // Disable damping for a more consistent speed
+        // Adjust speed settings
+        controls.panSpeed = 1; // Increase panning speed
+        controls.rotateSpeed = 1; // Increase rotation speed
+        controls.zoomSpeed = 1; // Increase zoom speed
 
-        // Adjusted camera position to have a better view of all elements
-        camera.position.set(5, 5, 15);
 
-        // Add lighting
-        const light = new THREE.AmbientLight(0xffffff, 0.5);
-        scene.add(light);
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
 
-        const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-        directionalLight.position.set(0, 10, 10);
-        scene.add(directionalLight);
+        const handleMouseClick = (event) => {
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(scene.children, true);
 
-        // Add a simple cube at the origin
-        const geometry = new THREE.BoxGeometry(1, 1, 1);
-        const material = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-        const testCube = new THREE.Mesh(geometry, material);
-        testCube.position.set(0, 0, 0);
-        scene.add(testCube);
+            if (intersects.length > 0) {
+                const intersectedObject = intersects[0].object;
+                if (intersectedObject.userData && intersectedObject.userData.onClick) {
+                    intersectedObject.userData.onClick();
+                }
+            }
+        };
 
-        // Start rendering the scene
+        window.addEventListener('click', handleMouseClick);
+
         const animate = () => {
             requestAnimationFrame(animate);
             controls.update();
@@ -51,92 +55,178 @@ const Html3DRenderer = () => {
         };
         animate();
 
-        console.log("Scene initialized and rendering started.");
-
-        // Cleanup on unmount
         return () => {
-            mountRef.current.removeChild(renderer.domElement);
+            if (mountRef.current && mountRef.current.contains(renderer.domElement)) {
+                mountRef.current.removeChild(renderer.domElement);
+            }
+            controls.dispose();
+            window.removeEventListener('click', handleMouseClick);
         };
     }, []);
 
     useEffect(() => {
         if (sceneRef.current) {
-            console.log("Scene is ready. Starting to process the DOM.");
             create3DFromDOM(document.body, null, 0, sceneRef.current);
-        } else {
-            console.log("Scene is not defined.");
         }
     }, [sceneRef.current]);
 
     return <div ref={mountRef}></div>;
 };
 
-const create3DFromDOM = (element, parentObj = null, depth = 0, scene) => {
-    if (!element) {
-        console.log("No element found to process.");
-        return;
+let cubeCount = 0;
+
+// Main function to create 3D representation of the DOM
+const processedElements = new Set(); // Track processed elements
+
+const create3DFromDOM = (element, parentObj = null, depth = 0, scene, angle = 0, distance = 5) => {
+    if (!element || element.nodeType !== 1 || processedElements.has(element)) return; // Skip if already processed or not an element
+
+    processedElements.add(element); // Mark the element as processed
+
+    // Generate a unique key for the element
+    if (!element.dataset.key) {
+        element.dataset.key = `${element.tagName.toLowerCase()}-${Math.random().toString(36).substr(2, 9)}`;
     }
+    const uniqueKey = element.dataset.key;
 
     const tagName = element.tagName.toLowerCase();
+    cubeCount++;
+    console.log(`Processing element: ${tagName} with key: ${uniqueKey} | Cube Count: ${cubeCount}`);
 
-    console.log(`Processing element: ${tagName}`);
+    // Adjust size and color logic
+    const size = parentObj ? 1 : 2;
+    const geometry = new THREE.BoxGeometry(size, size, size);
+    const material = new THREE.MeshBasicMaterial({
+        color: parentObj ? 0x00ff00 + depth * 1000 : 0x00ff00
+    });
 
-    const inheritedProps = getInheritedProperties(element);
-
-    const geometry = new THREE.BoxGeometry(1, 1, 1);
-    const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 + depth * 1000 });
     const cube = new THREE.Mesh(geometry, material);
 
-    // Adjust positioning logic to make sure cubes are visible
-    const xPosition = depth * 4; 
-    const yPosition = 0; 
-    const zPosition = 0;
-    cube.position.set(xPosition, yPosition, zPosition);
+    // Calculate position using angle and distance from parent, with extra offset for child elements
+    let xPosition = parentObj ? parentObj.position.x + (distance + depth * 0.5) * Math.cos(angle) : 0;
+    let yPosition = parentObj ? parentObj.position.y + depth * 0.2 : 0; // Add slight vertical offset based on depth
+    let zPosition = parentObj ? parentObj.position.z + (distance + depth * 0.5) * Math.sin(angle) : 0;
 
-    console.log(`Adding cube for element: ${tagName} at position (${xPosition}, ${yPosition}, ${zPosition})`);
+    // Apply small random offset to avoid overlap
+    xPosition += Math.random() * 0.1 - 0.05;
+    yPosition += Math.random() * 0.1 - 0.05;
+    zPosition += Math.random() * 0.1 - 0.05;
+
+
+    cube.position.set(xPosition, yPosition, zPosition);
 
     if (parentObj) {
         parentObj.add(cube);
-
-        const lineGeometry = new THREE.BufferGeometry().setFromPoints([parentObj.position, cube.position]);
-        const lineMaterial = new THREE.LineBasicMaterial({ color: 0x000000 });
+        const parentWorldPosition = new THREE.Vector3();
+        parentObj.getWorldPosition(parentWorldPosition);
+        const childWorldPosition = new THREE.Vector3();
+        cube.getWorldPosition(childWorldPosition);
+        const lineGeometry = new THREE.BufferGeometry().setFromPoints([parentWorldPosition, childWorldPosition]);
+        const lineMaterial = new THREE.LineBasicMaterial({ color: 0xffffff });
         const line = new THREE.Line(lineGeometry, lineMaterial);
         scene.add(line);
 
-        const midPoint = new THREE.Vector3().addVectors(parentObj.position, cube.position).multiplyScalar(0.5);
-        createTextLabel(scene, `color: ${inheritedProps.color}`, midPoint);
-        createTextLabel(scene, `font-size: ${inheritedProps.fontSize}`, midPoint.add(new THREE.Vector3(0, -0.5, 0)));
+        const relevantStyles = getRelevantComputedStyles(element);
+        createDropdownMenu(scene, relevantStyles, childWorldPosition, element); // Pass the element here
+
     } else {
         scene.add(cube);
     }
 
-    Array.from(element.children).forEach(child => {
-        create3DFromDOM(child, cube, depth + 1, scene);
+    const childElements = Array.from(element.children);
+    const childCount = childElements.length;
+    let currentAngle = 0;
+
+    childElements.forEach((child, index) => {
+        const angleIncrement = (2 * Math.PI) / childCount;
+        create3DFromDOM(child, cube, depth + 1, scene, currentAngle, distance);
+        currentAngle += angleIncrement;
     });
 };
 
-const getInheritedProperties = (element) => {
-    const style = window.getComputedStyle(element);
-    return {
-        color: style.color,
-        fontSize: style.fontSize
-    };
+
+// Function to get only the relevant computed styles for display
+const getRelevantComputedStyles = (element) => {
+    const styles = window.getComputedStyle(element);
+    const relevantProperties = [
+        'display', 'height', 'width', 'font-size', 'font-weight',
+        'margin-block-end', 'margin-block-start', 'margin-inline-end',
+        'margin-inline-start', 'unicode-bidi'
+    ];
+
+    let relevantStyles = {};
+    relevantProperties.forEach(property => {
+        const value = styles.getPropertyValue(property);
+        if (value) {
+            relevantStyles[property] = value;
+        }
+    });
+    return relevantStyles;
 };
 
-const createTextLabel = (scene, text, position) => {
+// Function to create a 3D dropdown menu to display computed styles
+const createDropdownMenu = (scene, styles, position, element) => {
+    const dropdownGroup = new THREE.Group();
+    dropdownGroup.position.copy(position);
+    scene.add(dropdownGroup);
+
+    const dropdownGeometry = new THREE.BoxGeometry(1, 0.2, 0.2);
+    const dropdownMaterial = new THREE.MeshBasicMaterial({ color: 0x4444 });
+    const dropdownButton = new THREE.Mesh(dropdownGeometry, dropdownMaterial);
+
+    dropdownButton.position.set(0, 1, 0); 
+    dropdownGroup.add(dropdownButton);
+
+    dropdownButton.userData = {
+        expanded: false,
+        onClick: () => toggleDropdown(dropdownButton, dropdownGroup)
+    };
+
+    let yOffset = -0.3;
+    for (const [property, value] of Object.entries(styles)) {
+        const labelPosition = new THREE.Vector3(0, yOffset, 0);
+        const label = createTextLabel(dropdownGroup, `${property}: ${value}`, labelPosition);
+        if (label) {
+            label.visible = false; 
+        }
+        yOffset -= 0.3;
+    }
+
+    // Add text label to display the element's HTML representation
+    const elementHtml = `<${element.tagName.toLowerCase()}>${element.innerHTML}</${element.tagName.toLowerCase()}>`;
+    const elementLabelPosition = new THREE.Vector3(0, yOffset, 0);
+    createTextLabel(dropdownGroup, elementHtml, elementLabelPosition);
+};
+
+
+
+// Function to toggle the dropdown menu visibility
+const toggleDropdown = (dropdownButton, dropdownGroup) => {
+    dropdownButton.userData.expanded = !dropdownButton.userData.expanded;
+    dropdownGroup.children.forEach((child, index) => {
+        if (index > 0) {
+            child.visible = dropdownButton.userData.expanded;
+        }
+    });
+};
+
+// Function to create a text label
+const createTextLabel = (group, text, position) => {
     const loader = new FontLoader();
     loader.load('/helvetiker_bold.typeface.json', (font) => {
         const textGeometry = new TextGeometry(text, {
             font: font,
             size: 0.2,
-            depth: 0.02,  // Replaced height with depth
+            depth: 0.02,
             curveSegments: 12,
             bevelEnabled: false
         });
-        const textMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
+        const textMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
         const textMesh = new THREE.Mesh(textGeometry, textMaterial);
         textMesh.position.copy(position);
-        scene.add(textMesh);
+        textMesh.visible = false; // Ensure the label is hidden immediately
+        group.add(textMesh);
+        return textMesh;
     });
 };
 
