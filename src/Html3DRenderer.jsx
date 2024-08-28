@@ -91,9 +91,9 @@ const create3DFromDOM = (element, parentObj = null, depth = 0, scene, angle = 0,
 
     const tagName = element.tagName.toLowerCase();
     cubeCount++;
-    console.log(`Processing element: ${tagName} with key: ${uniqueKey} | Cube Count: ${cubeCount}`);
+    // console.log(`Processing element: ${tagName} with key: ${uniqueKey} | Cube Count: ${cubeCount}`);
 
-    // Adjust size and color logic
+   
     const size = parentObj ? 1 : 2;
     const geometry = new THREE.BoxGeometry(size, size, size);
     const material = new THREE.MeshBasicMaterial({
@@ -126,8 +126,11 @@ const create3DFromDOM = (element, parentObj = null, depth = 0, scene, angle = 0,
         const line = new THREE.Line(lineGeometry, lineMaterial);
         scene.add(line);
 
-        const relevantStyles = getRelevantComputedStyles(element);
-        createDropdownMenu(scene, relevantStyles, childWorldPosition, element); // Pass the element here
+        const effectiveStyles = getEffectiveStyles(element);
+        console.log('Effective Styles for element:', element.tagName, effectiveStyles);
+        createDropdownMenu(scene, effectiveStyles, childWorldPosition, element);
+
+
 
     } else {
         scene.add(cube);
@@ -144,27 +147,59 @@ const create3DFromDOM = (element, parentObj = null, depth = 0, scene, angle = 0,
     });
 };
 
+// Cache for storing default styles
+const defaultStylesCache = {};
 
-// Function to get only the relevant computed styles for display
-const getRelevantComputedStyles = (element) => {
-    const styles = window.getComputedStyle(element);
-    const relevantProperties = [
-        'display', 'height', 'width', 'font-size', 'font-weight',
-        'margin-block-end', 'margin-block-start', 'margin-inline-end',
-        'margin-inline-start', 'unicode-bidi'
-    ];
-
-    let relevantStyles = {};
-    relevantProperties.forEach(property => {
-        const value = styles.getPropertyValue(property);
-        if (value) {
-            relevantStyles[property] = value;
+const getDefaultStyles = (tagName) => {
+    if (!defaultStylesCache[tagName]) {
+        const tempElement = document.createElement(tagName);
+        document.body.appendChild(tempElement);
+        const computed = window.getComputedStyle(tempElement);
+        
+        // Convert computed styles to a plain object for easier comparison
+        const defaultStyles = {};
+        for (let property of computed) {
+            defaultStyles[property] = computed.getPropertyValue(property);
         }
-    });
-    return relevantStyles;
+
+        defaultStylesCache[tagName] = defaultStyles;
+        document.body.removeChild(tempElement);
+    }
+    return defaultStylesCache[tagName];
 };
 
-// Function to create a 3D dropdown menu to display computed styles
+
+
+const getEffectiveStyles = (element) => {
+    const computedStyles = window.getComputedStyle(element);
+    const defaultStyles = getDefaultStyles(element.tagName.toLowerCase());
+    
+    const effectiveStyles = {};
+
+    // Iterate over all computed style properties
+    for (let property of computedStyles) {
+        const computedValue = computedStyles.getPropertyValue(property);
+        const defaultValue = defaultStyles[property]; // Access directly from the plain object
+
+        // Include styles that differ from the default styles
+        if (computedValue !== defaultValue) {
+            effectiveStyles[property] = computedValue;
+        }
+    }
+
+    return effectiveStyles;
+};
+
+
+
+
+// // Function to get only the effective computed styles for display
+// const getEffectiveComputedStyles = (element) => {
+//     return getEffectiveStyles(element); // Directly return all effective styles
+// };
+
+
+
 const createDropdownMenu = (scene, styles, position, element) => {
     const dropdownGroup = new THREE.Group();
     dropdownGroup.position.copy(position);
